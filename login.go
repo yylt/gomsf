@@ -1,121 +1,72 @@
 package gomsf
 
-import (
-	"github.com/vmihailenco/msgpack"
-)
-
 const (
 	authlogin = "auth.login"
-	authlogou = "auth.logout"
-	tokenlist = "auth.token_list"
-	tokenadd = "auth.token_add"
-	tokengen= "auth.token_generate"
-	tokenrm = "auth.token_remove"
+	authlogout = "auth.logout"
+	authTokenlist = "auth.token_list"
+	authTokenadd  = "auth.token_add"
+	authTokengen  = "auth.token_generate"
+	authTokenrm   = "auth.token_remove"
 )
 
-type tokendt struct {
+type AuthLogin struct {
 	Result string `msgpack:"result"`
-	Token string `msgpack:"token"`
+	Token  string `msgpack:"token"`
 }
 
-type tlistdt struct {
+type AuthList struct {
 	Tokens []string `msgpack:"tokens"`
 }
 
-func (m *MsfGo) Login(user,pass string) (string,error) {
-	bodys := []string{authlogin,user,pass}
-	bs,err:=msgpack.Marshal(bodys)
-	if err!= nil{
-		return "",err
+func Login(cli MsfCli, user, pass string) (string, error) {
+	var (
+		retv *AuthLogin
+		sts = []string{authlogin, user, pass}
+	)
+	err := cli.Send(sts,&retv)
+	if err != nil {
+		return "", err
 	}
-	resp,err:=m.send(true,bs)
-	if err!= nil{
-		return "",err
-	}
-
-	var auth tokendt
-	err = msgpack.Unmarshal(resp,&auth)
-	if err!= nil{
-		return "",err
-	}
-	return auth.Token,nil
-
+	return retv.Token,nil
 }
 
-func (m *MsfGo) Logout() error {
+func Logout(cli MsfCli, token, oldtoken string ) error {
 	var (
-		token = m.GetToken()
+		retv *AuthLogin
+		sts = []string{authlogout, token, oldtoken}
 	)
-	if token==""{
-		return ErrNotAuth
-	}
-	bodys := []string{authlogou,token}
-	bs,err:=msgpack.Marshal(bodys)
-	if err!= nil{
-		return err
-	}
-	_,err=m.send(true,bs)
-	return err
+	return cli.Send(sts,&retv)
 }
 
 
-func (m *MsfGo) TokenAdd(newt string) error {
+func (m *MsfGo) TokenAdd(cli MsfCli, token, newtoken string) error {
 	var (
-		token = m.GetToken()
+		retv *AuthLogin
+		sts = []string{authTokenadd, token, newtoken}
 	)
-	if token==""{
-		return ErrNotAuth
-	}
-	bodys := []string{tokenadd,newt}
-	bs,err:=msgpack.Marshal(bodys)
-	if err!= nil{
-		return err
-	}
-	_,err=m.send(true,bs)
-	return err
+	return cli.Send(sts,&retv)
 }
 
-func (m *MsfGo) TokenGen( ) (string,error) {
+func (m *MsfGo) TokenGen(cli MsfCli, token string) error {
 	var (
-		token = m.GetToken()
+		retv *AuthLogin
+		sts = []string{authTokengen, token}
 	)
-	if token==""{
-		return "",ErrNotAuth
-	}
-	bodys := []string{tokengen,token}
-	bs,err:=msgpack.Marshal(bodys)
-	if err!= nil{
-		return "",err
-	}
-	var auth tokendt
-	err = msgpack.Unmarshal(bs,&auth)
-	if err!= nil{
-		return "",err
-	}
-	return auth.Token,nil
+	return cli.Send(sts,&retv)
 }
 
-
-func (m *MsfGo) TokenList() ([]string,error) {
+func (m *MsfGo) TokenRm(cli MsfCli, token, rmtoken string) error {
 	var (
-		token = m.GetToken()
+		retv *AuthLogin
+		sts = []string{authTokenrm, token, rmtoken}
 	)
-	if token==""{
-		return nil,ErrNotAuth
-	}
-	bodys := []string{tokenlist,token}
-	bs,err:=msgpack.Marshal(bodys)
-	if err!= nil{
-		return nil,err
-	}
-	resp,err:=m.send(false,bs)
-	if err!= nil{
-		return nil,err
-	}
-	var t tlistdt
-	err = msgpack.Unmarshal(resp,&t)
-	if err!= nil{
-		return nil,err
-	}
-	return t.Tokens,nil
+	return cli.Send(sts,&retv)
+}
+
+func (m *MsfGo) Tokenlist(cli MsfCli, token string) (*AuthList, error ){
+	var (
+		retv *AuthList
+		sts = []string{authTokenlist, token}
+	)
+	return retv, cli.Send(sts,&retv)
 }
