@@ -1,5 +1,7 @@
 package gomsf
 
+import "fmt"
+
 const (
 	cslcreate   = "console.create"
 	csllist     = "console.list"
@@ -10,7 +12,7 @@ const (
 	cslsskill   = "console.session_kill"
 	cslssdetach = "console.session_detach"
 )
-//
+
 type ConsoleInfo struct {
 	Id     string `msgpack:"id"`
 	Prompt string `msgpack:"prompt"`
@@ -22,131 +24,109 @@ type ConsoleDataInfo struct {
 	Prompt string `msgpack:"prompt"`
 	Busy   bool   `msgpack:"busy"`
 }
-//
-//func (m *MsfGo) ConsoleCreate() (*ConsoleInfo, error) {
-//	var (
-//		bs    []byte
-//		err   error
-//		token = m.GetToken()
-//	)
-//	if token == "" {
-//		return nil, ErrNotAuth
-//	}
-//	bodys := []string{cslcreate, token}
-//	bs, err = msgpack.Marshal(bodys)
-//	if err != nil {
-//		return nil, err
-//	}
-//	bs, err = m.send(false, bs)
-//	if err != nil {
-//		return nil, err
-//	}
-//	var ct ConsoleInfo
-//	err = msgpack.Unmarshal(bs, &ct)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return &ct, nil
-//}
-//
-//func (m *MsfGo) ConsoleList() ([]*ConsoleInfo, error) {
-//	var (
-//		bs    []byte
-//		err   error
-//		token = m.GetToken()
-//		infos []*ConsoleInfo
-//	)
-//	if token == "" {
-//		return nil, ErrNotAuth
-//	}
-//	bodys := []string{csllist, token}
-//	bs, err = msgpack.Marshal(bodys)
-//	if err != nil {
-//		return nil, err
-//	}
-//	bs, err = m.send(false, bs)
-//	if err != nil {
-//		return nil, err
-//	}
-//	var ct = map[string]*ConsoleInfo{}
-//	err = msgpack.Unmarshal(bs, &ct)
-//	if err != nil {
-//		return nil, err
-//	}
-//	for _, v := range ct {
-//		infos = append(infos, v)
-//	}
-//	return infos, nil
-//}
-//
-//func (m *MsfGo) ConsoleDestroy(id string) error {
-//	var (
-//		bs    []byte
-//		err   error
-//		token = m.GetToken()
-//	)
-//	if token == "" {
-//		return ErrNotAuth
-//	}
-//	bodys := []string{cslrm, token, id}
-//	bs, err = msgpack.Marshal(bodys)
-//	if err != nil {
-//		return err
-//	}
-//	_, err = m.send(true, bs)
-//	return err
-//}
-//
-//func (m *MsfGo) ConsoleWrite(cmd string) error {
-//	var (
-//		bs    []byte
-//		err   error
-//		token = m.GetToken()
-//	)
-//	if token == "" {
-//		return ErrNotAuth
-//	}
-//	cmd = fmt.Sprintf("%s\n", cmd)
-//	length := len(cmd)
-//	bodys := []string{cslwrite, token, cmd}
-//	bs, err = msgpack.Marshal(bodys)
-//	if err != nil {
-//		return err
-//	}
-//	var ct = map[string]int{}
-//	bs, err = m.send(false, bs)
-//	err = msgpack.Unmarshal(bs, &ct)
-//	if err != nil {
-//		return err
-//	}
-//	if v, ok := ct["wrote"]; ok {
-//		if v == length {
-//			return nil
-//		}
-//		return fmt.Errorf("wrong length %d", v)
-//	}
-//	return fmt.Errorf("wrong return-type: %v", ct)
-//}
-//
-//func (m *MsfGo) ConsoleRead(id string) (string, error) {
-//	var (
-//		bs    []byte
-//		err   error
-//		token = m.GetToken()
-//	)
-//	if token == "" {
-//		return "", ErrNotAuth
-//	}
-//	bodys := []string{cslread, token, id}
-//	bs, err = msgpack.Marshal(bodys)
-//	if err != nil {
-//		return "", err
-//	}
-//	var ct ConsoleDataInfo
-//	bs, err = m.send(false, bs)
-//	err = msgpack.Unmarshal(bs, &ct)
-//	if err != nil {
-//		return "", err
-//	}
-//	return strings.TrimSpace(ct.Data), nil
-//}
+
+type ConsoleTabInfo struct {
+	Tabs []string `msgpack:"tabs"`
+}
+
+func ConsoleCreate(cli MsfCli, token string) (*ConsoleInfo, error) {
+	var (
+		retv *ConsoleInfo
+		sts  = []string{cslcreate, token}
+	)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return nil, err
+	}
+	return retv, nil
+}
+
+func ConsoleDestory(cli MsfCli, token, consoleId string) (*Generic, error) {
+	var (
+		retv *Generic
+		sts  = []string{cslrm, token, consoleId}
+	)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return nil, err
+	}
+	return retv, nil
+}
+
+func ConsoleList(cli MsfCli, token string) ([]*ConsoleInfo, error) {
+	var (
+		retv []*ConsoleInfo
+		sts  = []string{csllist, token}
+	)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return nil, err
+	}
+	return retv, nil
+}
+
+func ConsoleWrite(cli MsfCli, token, consoleId string, data []byte) error {
+	var (
+		sts = []string{cslwrite, token, consoleId, string(data)}
+	)
+	var ret struct {
+		Wrote int `msgpack:"wrote"`
+	}
+	var r = &ret
+	err := cli.Send(sts, &r)
+	if err != nil {
+		return err
+	}
+	if ret.Wrote != len(data) {
+		return fmt.Errorf("write %d, but expect %d", ret.Wrote, len(data))
+	}
+	return nil
+}
+
+func ConsoleRead(cli MsfCli, token, consoleId string) (*ConsoleDataInfo, error) {
+	var (
+		retv *ConsoleDataInfo
+		sts  = []string{cslread, token, consoleId}
+	)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return nil, err
+	}
+	return retv, nil
+}
+
+func ConsoleSessDetach(cli MsfCli, token, consoleId string) (*Generic, error) {
+	var (
+		retv *Generic
+		sts  = []string{cslssdetach, token, consoleId}
+	)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return nil, err
+	}
+	return retv, nil
+}
+
+func ConsoleSessKill(cli MsfCli, token, consoleId string) (*Generic, error) {
+	var (
+		retv *Generic
+		sts  = []string{cslsskill, token, consoleId}
+	)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return nil, err
+	}
+	return retv, nil
+}
+
+func ConsoleTabs(cli MsfCli, token, consoleId, input string) (*ConsoleTabInfo, error) {
+	var (
+		retv *ConsoleTabInfo
+		sts  = []string{csltabs, token, consoleId, input}
+	)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return nil, err
+	}
+	return retv, nil
+}

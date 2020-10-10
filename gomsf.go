@@ -10,31 +10,30 @@ import (
 	msgpack "github.com/vmihailenco/msgpack/v5"
 )
 
-
 type Generic struct {
 	Restult string `msgpack:"result"`
 }
 
 type MsfGo struct {
-	baseurl  string
+	baseurl string
 
 	headers http.Header
 	httpcli *req.Req
 }
 
 type MsfCli interface {
-	Send([]string, interface{}) (error)
+	Send([]string, interface{}) error
 }
 
 type Opt func(msfGo *MsfGo)
 
-func WithDebug(debug bool) Opt{
+func WithDebug(debug bool) Opt {
 	return func(msfGo *MsfGo) {
-		if debug == true{
-			req.Debug=true
+		if debug == true {
+			req.Debug = true
 			return
 		}
-		req.Debug=false
+		req.Debug = false
 	}
 }
 
@@ -50,7 +49,7 @@ func WithTimeOut(tm time.Duration) Opt {
 	}
 }
 
-func NewMsf(addr string, usessl bool,opts ...Opt) *MsfGo {
+func NewMsf(addr string, usessl bool, opts ...Opt) *MsfGo {
 	var msfdUrl string
 	rq := req.New()
 	if usessl {
@@ -60,21 +59,20 @@ func NewMsf(addr string, usessl bool,opts ...Opt) *MsfGo {
 	}
 
 	msf := &MsfGo{
-		baseurl:    msfdUrl,
+		baseurl: msfdUrl,
 		httpcli: rq,
 		headers: http.Header{
-			"Content-Type":   []string{"binary/message-pack"},
+			"Content-Type": []string{"binary/message-pack"},
 		},
 	}
 
-	for _,v :=range opts {
+	for _, v := range opts {
 		v(msf)
 	}
 	return msf
 }
 
-
-func (m *MsfGo) Send(sts []string, save interface{})  (error) {
+func (m *MsfGo) Send(sts []string, save interface{}) error {
 	var (
 		buf = bufpool.Get().(*bytes.Buffer)
 		err error
@@ -83,7 +81,7 @@ func (m *MsfGo) Send(sts []string, save interface{})  (error) {
 	defer bufpool.Put(buf)
 
 	err = msgpack.NewEncoder(buf).Encode(sts)
-	if err!= nil {
+	if err != nil {
 		return err
 	}
 

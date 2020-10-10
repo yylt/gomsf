@@ -1,72 +1,78 @@
 package gomsf
 
 const (
-	authlogin = "auth.login"
-	authlogout = "auth.logout"
+	authlogin     = "auth.login"
+	authlogout    = "auth.logout"
 	authTokenlist = "auth.token_list"
 	authTokenadd  = "auth.token_add"
 	authTokengen  = "auth.token_generate"
 	authTokenrm   = "auth.token_remove"
 )
 
-type AuthLogin struct {
+type authLogin struct {
 	Result string `msgpack:"result"`
 	Token  string `msgpack:"token"`
 }
 
-type AuthList struct {
-	Tokens []string `msgpack:"tokens"`
-}
-
 func Login(cli MsfCli, user, pass string) (string, error) {
 	var (
-		retv *AuthLogin
-		sts = []string{authlogin, user, pass}
+		retv *authLogin
+		sts  = []string{authlogin, user, pass}
 	)
-	err := cli.Send(sts,&retv)
+	err := cli.Send(sts, &retv)
 	if err != nil {
 		return "", err
 	}
-	return retv.Token,nil
+	return retv.Token, nil
 }
 
-func Logout(cli MsfCli, token, oldtoken string ) error {
+func Logout(cli MsfCli, token, oldtoken string) error {
 	var (
-		retv *AuthLogin
-		sts = []string{authlogout, token, oldtoken}
+		retv *Generic
+		sts  = []string{authlogout, token, oldtoken}
 	)
-	return cli.Send(sts,&retv)
+	return cli.Send(sts, &retv)
 }
 
-
-func (m *MsfGo) TokenAdd(cli MsfCli, token, newtoken string) error {
+func TokenAdd(cli MsfCli, token, newtoken string) error {
 	var (
-		retv *AuthLogin
-		sts = []string{authTokenadd, token, newtoken}
+		retv *Generic
+		sts  = []string{authTokenadd, token, newtoken}
 	)
-	return cli.Send(sts,&retv)
+	return cli.Send(sts, &retv)
 }
 
-func (m *MsfGo) TokenGen(cli MsfCli, token string) error {
+func TokenGen(cli MsfCli, token string) (string, error) {
 	var (
-		retv *AuthLogin
-		sts = []string{authTokengen, token}
+		retv *authLogin
+		sts  = []string{authTokengen, token}
 	)
-	return cli.Send(sts,&retv)
+	err := cli.Send(sts, &retv)
+	if err != nil {
+		return "", err
+	}
+	return retv.Token, nil
 }
 
-func (m *MsfGo) TokenRm(cli MsfCli, token, rmtoken string) error {
+func TokenRm(cli MsfCli, token, rmtoken string) error {
 	var (
-		retv *AuthLogin
-		sts = []string{authTokenrm, token, rmtoken}
+		retv *Generic
+		sts  = []string{authTokenrm, token, rmtoken}
 	)
-	return cli.Send(sts,&retv)
+	return cli.Send(sts, &retv)
 }
 
-func (m *MsfGo) Tokenlist(cli MsfCli, token string) (*AuthList, error ){
+func Tokenlist(cli MsfCli, token string) ([]string, error) {
 	var (
-		retv *AuthList
+		retv struct {
+			Tokens []string `msgpack:"tokens"`
+		}
 		sts = []string{authTokenlist, token}
 	)
-	return retv, cli.Send(sts,&retv)
+	var r = &retv
+	err := cli.Send(sts, &r)
+	if err != nil {
+		return nil, err
+	}
+	return retv.Tokens, nil
 }
